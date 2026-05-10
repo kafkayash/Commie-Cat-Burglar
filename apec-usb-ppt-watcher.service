@@ -1,0 +1,12 @@
+[Unit]
+Description=Watch USB mounts and copy PPT/PPTX files to ~/APEC_files
+After=default.target
+
+[Service]
+Type=simple
+ExecStart=/bin/bash %h/.local/bin/apec_usb_ppt_watcher.sh
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

