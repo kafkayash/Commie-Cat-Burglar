@@ -96,9 +96,9 @@ while true; do
     sleep 2
 done
 ```
-so yeah you can change it as you please to whatever name and whatever files you want including .slx,.py and many more !
 ---
-
+so yeah you can change it as you please to whatever name and whatever files you want including .slx,.py and many more !
+Another improvision you can do is just create the directory in tmp folder so it wont even be visible, the current script implements a cavemen version of stealth its easy to get caught as the folder is created in home directory itself(ik its dumb) but you can always point it to store it in "tmp", just adds an extra layer !
 ### 4. Fix Line Endings
 
 ```bash
